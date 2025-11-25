@@ -10,7 +10,7 @@ public final class Level {
 
     private final WarehouseKeeper keeper;
     private final List<Tile> tiles = new ArrayList<>();
-    private final Map<Integer, Crate> crates = new HashMap<>();
+    final Map<Integer, Crate> crates = new HashMap<>();
 
     public Level(int number, int width, int height, int numOfCrates, WarehouseKeeper keeper) {
         this.number = number;
@@ -61,5 +61,10 @@ public final class Level {
     public Tile tileAt(int x, int y) {
         for (Tile t : tiles) if (t.getX()==x && t.getY()==y) return t;
         return null;
+    }
+
+    public Tile getTile(int i, int j) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTile'");
     }
 }

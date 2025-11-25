@@ -1,44 +1,136 @@
 package sokoban;
 
-public final class WarehouseKeeper {
-    private int x;
-    private int y;
-    private final int spawnX;
-    private final int spawnY;
-    private int numOfMoves = 0;
+import java.util.List;
+import java.util.Map;
 
-    public WarehouseKeeper(int startX, int startY) {
+public class WarehouseKeeper {
+
+    public int x;
+    public int y;
+
+    private int startX;
+    private int startY;
+
+    private int moves = 0;
+
+    public WarehouseKeeper(int x, int y) {
+        this.x = x;
+        this.y = y;
+        this.startX = x;
+        this.startY = y;
+    }
+
+    public int getMoves() {
+        return moves;
+    }
+
+    public void resetPosition() {
         this.x = startX;
         this.y = startY;
-        this.spawnX = startX;
-        this.spawnY = startY;
+        this.moves = 0;
     }
 
-    public int getX() { return x; }
-    public int getY() { return y; }
+    public boolean move(int dx, int dy, Level level) {
 
-    public int checkNumOfMoves() { return numOfMoves; }
-    public void resetMoveCount() { numOfMoves = 0; }
+        Tile nextTile = level.getTile(x + dx, y + dy);
 
-    public void resetPosition() { this.x = spawnX; this.y = spawnY; }
-    public void resetPosition(int x, int y) { this.x = x; this.y = y; }
+        // Check if crate is at next position
+        Crate crateToPush = getCrateAt(level.crates, x + dx, y + dy);
 
-    public boolean move(String direction) {
-        switch(direction.toLowerCase()) {
-            case "up": y -= 1; break;
-            case "down": y += 1; break;
-            case "left": x -= 1; break;
-            case "right": x += 1; break;
-            default: return false;
+        if (crateToPush != null) {
+            // Try to push the crate
+            if (push(crateToPush, dx, dy, level)) {
+                x += dx;
+                y += dy;
+                moves++;
+                return true;
+            }
+            return false; // blocked
         }
-        numOfMoves++;
+
+        // Normal movement if next tile is NOT a wall
+        if (!(nextTile instanceof Wall)) {
+            x += dx;
+            y += dy;
+            moves++;
+            return true;
+        }
+
+        return false; // wall
+    }
+
+    private boolean push(Crate crate, int dx, int dy, Level level) {
+
+        int newCX = crate.x + dx;
+        int newCY = crate.y + dy;
+
+        // Blocked by wall or another crate?
+        if (level.getTile(newCX, newCY) instanceof Wall) {
+            return false;
+        }
+
+        if (getCrateAt(level.crates, newCX, newCY) != null) {
+            return false;
+        }
+
+        // Move crate exactly one tile
+        crate.x = newCX;
+        crate.y = newCY;
+
         return true;
     }
 
-    public boolean push(Crate crate, String direction) {
-        if (crate == null) return false;
-        crate.move(direction);
-        numOfMoves++;
-        return true;
+    private Crate getCrateAt(Map<Integer,Crate> crates, int x, int y) {
+        for (Crate c : crates.values()) {
+            if (c.x == x && c.y == y) return c;
+        }
+        return null;
+    }
+
+    public void resetMoveCount() {
+        // TODO Auto-generated method stub
+        //reset moves to 0
+        moves = 0;
+    }
+
+    public int checkNumOfMoves() {
+        // TODO Auto-generated method stub
+        return moves;
+    }
+
+    public int getX() {
+        // TODO Auto-generated method stub
+        return x;
+    }
+
+    public int getY() {
+        // TODO Auto-generated method stub
+        return y;  
+
+    }
+
+    public void move(String dir) {
+        // TODO Auto-generated method stub
+        if (dir.equals("up")) y--;
+        else if (dir.equals("down")) y++;
+        else if (dir.equals("left")) x--;
+        else if (dir.equals("right")) x++;
+
+        move(x, y, null);
+
+        throw new UnsupportedOperationException("Unimplemented method 'move'");
+    }
+
+    public void push(Crate c, String dir) {
+        // TODO Auto-generated method stub
+        
+        if (dir.equals("up")) y--;
+        else if (dir.equals("down")) y++;
+        else if (dir.equals("left")) x--;
+        else if (dir.equals("right")) x++;
+
+        move(x, y, null);
+        
+        throw new UnsupportedOperationException("Unimplemented method 'push'");
     }
 }

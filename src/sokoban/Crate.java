@@ -2,8 +2,8 @@ package sokoban;
 
 public final class Crate {
     private final int crateNum;
-    private int x;
-    private int y;
+    int x;
+    int y;
     private boolean onDiamond = false;
 
     public Crate(int crateNum, int startX, int startY) {
