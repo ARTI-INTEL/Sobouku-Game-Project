@@ -70,42 +70,37 @@ public class BoardPanel extends JPanel implements KeyListener {
         g.drawOval(kx+8,ky+8,TILE_SIZE-16,TILE_SIZE-16);
     }
 
-    private boolean isWall(int x, int y) {
-        Tile t = level.tileAt(x,y);
-        return t != null && !t.isWalkable();
-    }
-
-    private Crate crateAt(int x, int y) {
-        for (Crate c : level.getCrates()) if (c.getX()==x && c.getY()==y) return c;
-        return null;
-    }
-
+    /**
+     * FIXED: This method has been completely rewritten.
+     * All game logic is now delegated to the WarehouseKeeper.move() method,
+     * which was fixed in the previous step.
+     * This panel is now only responsible for calling the move and handling
+     * the UI response (beep, repaint, check for completion).
+     */
     private void attemptMove(String dir) {
-        WarehouseKeeper k = level.getKeeper();
-        int tx = k.getX();
-        int ty = k.getY();
-        switch(dir) { case "up": ty--; break; case "down": ty++; break; case "left": tx--; break; case "right": tx++; break; }
+        // Delegate move logic entirely to the keeper.
+        // We pass 'level' to the new move() method.
+        boolean moveSuccessful = level.getKeeper().move(dir, level);
 
-        if (isWall(tx,ty)) { Toolkit.getDefaultToolkit().beep(); return; }
-        Crate c = crateAt(tx,ty);
-        if (c==null) {
-            k.move(dir);
+        if (moveSuccessful) {
+            repaint();
+            if (level.complete()) {
+                // Fire off the completion message *after* Swing repaints
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this, "Level " + level.getNumber() + " complete! Moves: " + level.getKeeper().checkNumOfMoves());
+                });
+            }
         } else {
-            int nx = c.getX();
-            int ny = c.getY();
-            switch(dir) { case "up": ny--; break; case "down": ny++; break; case "left": nx--; break; case "right": nx++; break; }
-            if (isWall(nx,ny) || crateAt(nx,ny)!=null) { Toolkit.getDefaultToolkit().beep(); return; }
-            c.move(dir);
-            k.push(c, dir);
-            // if crate now on diamond, mark it
-            Tile tile = level.tileAt(c.getX(), c.getY());
-            if (tile instanceof Diamond) c.setOnDiamond(true);
+            // Move failed (blocked by wall or crate), play a beep
+            Toolkit.getDefaultToolkit().beep();
         }
-        repaint();
-        if (level.complete()) JOptionPane.showMessageDialog(this, "Level " + level.getNumber() + " complete! Moves: " + level.getKeeper().checkNumOfMoves());
     }
+    
+    // REMOVED isWall() and crateAt() helper methods, as they are
+    // no longer needed. The WarehouseKeeper handles this logic.
 
     @Override public void keyPressed(KeyEvent e) {
+        // This logic remains the same
         switch(e.getKeyCode()) {
             case KeyEvent.VK_UP: attemptMove("up"); break;
             case KeyEvent.VK_DOWN: attemptMove("down"); break;

@@ -63,8 +63,10 @@ public final class Level {
         return null;
     }
 
+    /**
+     * FIXED: Implemented this method to use the existing tileAt helper.
+     */
     public Tile getTile(int i, int j) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getTile'");
+        return tileAt(i, j);
     }
 }

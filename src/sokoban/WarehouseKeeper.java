@@ -30,28 +30,40 @@ public class WarehouseKeeper {
         this.moves = 0;
     }
 
+    /**
+     * FIXED: Rewritten for safety and correct logic.
+     * - Checks for null tiles (moving off-grid).
+     * - Uses isWalkable() for better polymorphism.
+     */
     public boolean move(int dx, int dy, Level level) {
 
-        Tile nextTile = level.getTile(x + dx, y + dy);
+        int nextX = x + dx;
+        int nextY = y + dy;
+        Tile nextTile = level.getTile(nextX, nextY);
+
+        // Can't move off-grid
+        if (nextTile == null) {
+            return false;
+        }
 
         // Check if crate is at next position
-        Crate crateToPush = getCrateAt(level.crates, x + dx, y + dy);
+        Crate crateToPush = getCrateAt(level.crates, nextX, nextY);
 
         if (crateToPush != null) {
             // Try to push the crate
             if (push(crateToPush, dx, dy, level)) {
-                x += dx;
-                y += dy;
+                x = nextX;
+                y = nextY;
                 moves++;
                 return true;
             }
             return false; // blocked
         }
 
-        // Normal movement if next tile is NOT a wall
-        if (!(nextTile instanceof Wall)) {
-            x += dx;
-            y += dy;
+        // Normal movement if next tile is walkable
+        if (nextTile.isWalkable()) {
+            x = nextX;
+            y = nextY;
             moves++;
             return true;
         }
@@ -59,13 +71,21 @@ public class WarehouseKeeper {
         return false; // wall
     }
 
+    /**
+     * FIXED: Rewritten to handle game logic correctly.
+     * - Checks for null/non-walkable target tiles.
+     * - Updates crate's 'onDiamond' status.
+     * - Updates Tile's internal crate count.
+     */
     private boolean push(Crate crate, int dx, int dy, Level level) {
 
         int newCX = crate.x + dx;
         int newCY = crate.y + dy;
 
-        // Blocked by wall or another crate?
-        if (level.getTile(newCX, newCY) instanceof Wall) {
+        Tile targetTile = level.getTile(newCX, newCY);
+
+        // Blocked by off-grid, wall, or another crate?
+        if (targetTile == null || !targetTile.isWalkable()) {
             return false;
         }
 
@@ -73,9 +93,21 @@ public class WarehouseKeeper {
             return false;
         }
 
+        // Get old tile BEFORE moving crate
+        Tile oldTile = level.getTile(crate.x, crate.y);
+
         // Move crate exactly one tile
         crate.x = newCX;
         crate.y = newCY;
+
+        // Update tile states
+        if (oldTile != null) {
+            oldTile.removeCrate();
+        }
+        targetTile.placeCrate(); // We know targetTile is not null
+
+        // Update crate's 'onDiamond' status (fixes Level.complete())
+        crate.setOnDiamond(targetTile instanceof Diamond);
 
         return true;
     }
@@ -87,50 +119,55 @@ public class WarehouseKeeper {
         return null;
     }
 
+    /**
+     * FIXED: Implemented.
+     */
     public void resetMoveCount() {
-        // TODO Auto-generated method stub
-        //reset moves to 0
         moves = 0;
     }
 
+    /**
+     * FIXED: Implemented.
+     */
     public int checkNumOfMoves() {
-        // TODO Auto-generated method stub
         return moves;
     }
 
+    /**
+     * FIXED: Implemented.
+     */
     public int getX() {
-        // TODO Auto-generated method stub
         return x;
     }
 
+    /**
+     * FIXED: Implemented.
+     */
     public int getY() {
-        // TODO Auto-generated method stub
         return y;  
-
     }
 
-    public void move(String dir) {
-        // TODO Auto-generated method stub
-        if (dir.equals("up")) y--;
-        else if (dir.equals("down")) y++;
-        else if (dir.equals("left")) x--;
-        else if (dir.equals("right")) x++;
-
-        move(x, y, null);
-
-        throw new UnsupportedOperationException("Unimplemented method 'move'");
-    }
-
-    public void push(Crate c, String dir) {
-        // TODO Auto-generated method stub
+    /**
+     * FIXED: Replaced old, broken methods with a functional one.
+     * This now requires the Level to be passed in.
+     */
+    public boolean move(String dir, Level level) {
+        if (level == null) {
+             throw new IllegalArgumentException("Level cannot be null for move");
+        }
         
-        if (dir.equals("up")) y--;
-        else if (dir.equals("down")) y++;
-        else if (dir.equals("left")) x--;
-        else if (dir.equals("right")) x++;
+        int dx = 0;
+        int dy = 0;
 
-        move(x, y, null);
+        switch (dir.toLowerCase()) {
+            case "up": dy = -1; break;
+            case "down": dy = 1; break;
+            case "left": dx = -1; break;
+            case "right": dx = 1; break;
+            default:
+                return false; // Unknown direction
+        }
         
-        throw new UnsupportedOperationException("Unimplemented method 'push'");
+        return move(dx, dy, level);
     }
 }
