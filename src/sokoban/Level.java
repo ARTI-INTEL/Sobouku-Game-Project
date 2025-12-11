@@ -35,7 +35,8 @@ public final class Level {
         // naive restart: send keeper back to spawn and reset counts
         keeper.resetPosition();
         keeper.resetMoveCount();
-        // crates/tiles should be reloaded by LevelLoader if needed
+        // crates/tiles should be reloaded by LevelLoader
+        crates.values().forEach(Crate::resetPosition);
     }
 
     public void load(List<Tile> tilesDefinition, List<Crate> crateList) {

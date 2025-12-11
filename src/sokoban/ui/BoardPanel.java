@@ -8,6 +8,7 @@ import sokoban.*;
 public class BoardPanel extends JPanel implements KeyListener {
     private static final int TILE_SIZE = 48;
     private Level level;
+    public boolean levelCompleted = false;
 
     public BoardPanel(Level level) {
         this.level = level;
@@ -70,15 +71,7 @@ public class BoardPanel extends JPanel implements KeyListener {
         g.drawOval(kx+8,ky+8,TILE_SIZE-16,TILE_SIZE-16);
     }
 
-    /**
-     * FIXED: This method has been completely rewritten.
-     * All game logic is now delegated to the WarehouseKeeper.move() method,
-     * which was fixed in the previous step.
-     * This panel is now only responsible for calling the move and handling
-     * the UI response (beep, repaint, check for completion).
-     */
     private void attemptMove(String dir) {
-        // Delegate move logic entirely to the keeper.
         // We pass 'level' to the new move() method.
         boolean moveSuccessful = level.getKeeper().move(dir, level);
 
@@ -95,9 +88,7 @@ public class BoardPanel extends JPanel implements KeyListener {
             Toolkit.getDefaultToolkit().beep();
         }
     }
-    
-    // REMOVED isWall() and crateAt() helper methods, as they are
-    // no longer needed. The WarehouseKeeper handles this logic.
+
 
     @Override public void keyPressed(KeyEvent e) {
         // This logic remains the same
@@ -106,6 +97,10 @@ public class BoardPanel extends JPanel implements KeyListener {
             case KeyEvent.VK_DOWN: attemptMove("down"); break;
             case KeyEvent.VK_LEFT: attemptMove("left"); break;
             case KeyEvent.VK_RIGHT: attemptMove("right"); break;
+            case KeyEvent.VK_W: attemptMove("up"); break;
+            case KeyEvent.VK_S: attemptMove("down"); break;
+            case KeyEvent.VK_A: attemptMove("left"); break;
+            case KeyEvent.VK_D: attemptMove("right"); break;
         }
     }
     @Override public void keyReleased(KeyEvent e) {}

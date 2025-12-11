@@ -1,173 +1,103 @@
 package sokoban;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Collection;
 
+/**
+ * WarehouseKeeper handles player position and move/push logic.
+ * Use move(String dir, Level level) to attempt a move.
+ */
 public class WarehouseKeeper {
-
     public int x;
     public int y;
+    private final int spawnX;
+    private final int spawnY;
+    private int numOfMoves = 0;
 
-    private int startX;
-    private int startY;
-
-    private int moves = 0;
-
-    public WarehouseKeeper(int x, int y) {
-        this.x = x;
-        this.y = y;
-        this.startX = x;
-        this.startY = y;
-    }
-
-    public int getMoves() {
-        return moves;
-    }
-
-    public void resetPosition() {
+    public WarehouseKeeper(int startX, int startY) {
         this.x = startX;
         this.y = startY;
-        this.moves = 0;
+        this.spawnX = startX;
+        this.spawnY = startY;
+    }
+
+    public int getX() { return x; }
+    public int getY() { return y; }
+    public int checkNumOfMoves() { return numOfMoves; }
+    public void resetMoveCount() { numOfMoves = 0; }
+
+    public void resetPosition() {
+        this.x = spawnX;
+        this.y = spawnY;
     }
 
     /**
-     * FIXED: Rewritten for safety and correct logic.
-     * - Checks for null tiles (moving off-grid).
-     * - Uses isWalkable() for better polymorphism.
-     */
-    public boolean move(int dx, int dy, Level level) {
-
-        int nextX = x + dx;
-        int nextY = y + dy;
-        Tile nextTile = level.getTile(nextX, nextY);
-
-        // Can't move off-grid
-        if (nextTile == null) {
-            return false;
-        }
-
-        // Check if crate is at next position
-        Crate crateToPush = getCrateAt(level.crates, nextX, nextY);
-
-        if (crateToPush != null) {
-            // Try to push the crate
-            if (push(crateToPush, dx, dy, level)) {
-                x = nextX;
-                y = nextY;
-                moves++;
-                return true;
-            }
-            return false; // blocked
-        }
-
-        // Normal movement if next tile is walkable
-        if (nextTile.isWalkable()) {
-            x = nextX;
-            y = nextY;
-            moves++;
-            return true;
-        }
-
-        return false; // wall
-    }
-
-    /**
-     * FIXED: Rewritten to handle game logic correctly.
-     * - Checks for null/non-walkable target tiles.
-     * - Updates crate's 'onDiamond' status.
-     * - Updates Tile's internal crate count.
-     */
-    private boolean push(Crate crate, int dx, int dy, Level level) {
-
-        int newCX = crate.x + dx;
-        int newCY = crate.y + dy;
-
-        Tile targetTile = level.getTile(newCX, newCY);
-
-        // Blocked by off-grid, wall, or another crate?
-        if (targetTile == null || !targetTile.isWalkable()) {
-            return false;
-        }
-
-        if (getCrateAt(level.crates, newCX, newCY) != null) {
-            return false;
-        }
-
-        // Get old tile BEFORE moving crate
-        Tile oldTile = level.getTile(crate.x, crate.y);
-
-        // Move crate exactly one tile
-        crate.x = newCX;
-        crate.y = newCY;
-
-        // Update tile states
-        if (oldTile != null) {
-            oldTile.removeCrate();
-        }
-        targetTile.placeCrate(); // We know targetTile is not null
-
-        // Update crate's 'onDiamond' status (fixes Level.complete())
-        crate.setOnDiamond(targetTile instanceof Diamond);
-
-        return true;
-    }
-
-    private Crate getCrateAt(Map<Integer,Crate> crates, int x, int y) {
-        for (Crate c : crates.values()) {
-            if (c.x == x && c.y == y) return c;
-        }
-        return null;
-    }
-
-    /**
-     * FIXED: Implemented.
-     */
-    public void resetMoveCount() {
-        moves = 0;
-    }
-
-    /**
-     * FIXED: Implemented.
-     */
-    public int checkNumOfMoves() {
-        return moves;
-    }
-
-    /**
-     * FIXED: Implemented.
-     */
-    public int getX() {
-        return x;
-    }
-
-    /**
-     * FIXED: Implemented.
-     */
-    public int getY() {
-        return y;  
-    }
-
-    /**
-     * FIXED: Replaced old, broken methods with a functional one.
-     * This now requires the Level to be passed in.
+     * Attempt to move the keeper in a direction.
+     * Returns true if the keeper moved (or pushed a crate and moved), false if blocked.
      */
     public boolean move(String dir, Level level) {
-        if (level == null) {
-             throw new IllegalArgumentException("Level cannot be null for move");
-        }
-        
-        int dx = 0;
-        int dy = 0;
-
+        int dx = 0, dy = 0;
         switch (dir.toLowerCase()) {
             case "up": dy = -1; break;
             case "down": dy = 1; break;
             case "left": dx = -1; break;
             case "right": dx = 1; break;
-            default:
-                return false; // Unknown direction
+            default: return false;
         }
-        
-        return move(dx, dy, level);
+
+        int tx = x + dx;
+        int ty = y + dy;
+
+        // Check for wall on the target tile
+        Tile targetTile = level.tileAt(tx, ty);
+        if (targetTile == null) return false; // out of bounds or invalid
+
+        if (!targetTile.isWalkable()) {
+            // wall or not walkable -> blocked
+            return false;
+        }
+
+        // Is there a crate at the destination?
+        Crate crate = findCrateAt(level.getCrates(), tx, ty);
+        if (crate == null) {
+            // empty or diamond or floor — just move keeper
+            x = tx;
+            y = ty;
+            numOfMoves++;
+            // after moving, update crate-on-diamond flags (none changed)
+            return true;
+        }
+
+        // There is a crate: attempt to push
+        int nx = crate.getX() + dx;
+        int ny = crate.getY() + dy;
+        Tile beyond = level.tileAt(nx, ny);
+        if (beyond == null) return false; // out of bounds
+
+        // cannot push into a wall or non-pushable tile
+        if (!beyond.isPushable() && !beyond.isWalkable()) return false;
+
+        // cannot push into another crate
+        if (findCrateAt(level.getCrates(), nx, ny) != null) return false;
+
+        // Move crate exactly one tile
+        crate.setX(nx);
+        crate.setY(ny);
+
+        // update crate on-diamond status
+        if (beyond instanceof Diamond) crate.setOnDiamond(true);
+        else crate.setOnDiamond(false);
+
+        // Move keeper into the crate's previous spot
+        x = tx;
+        y = ty;
+        numOfMoves++;
+        return true;
+    }
+
+    private Crate findCrateAt(Collection<Crate> crates, int x, int y) {
+        for (Crate c : crates) {
+            if (c.getX() == x && c.getY() == y) return c;
+        }
+        return null;
     }
 }
